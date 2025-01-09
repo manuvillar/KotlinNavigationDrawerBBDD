@@ -15,6 +15,8 @@ import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.snackbar.Snackbar
+import es.iesoretania.navigationdrawerbbddkotlin.adaptador.Empleado
 import es.iesoretania.navigationdrawerbbddkotlin.databinding.ActivityMainBinding
 import es.iesoretania.navigationdrawerbbddkotlin.databinding.NavHeaderMainBinding
 
@@ -22,7 +24,6 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityMainBinding
-    //private lateinit var bindingHeader: NavHeaderMainBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -95,11 +96,29 @@ class MainActivity : AppCompatActivity() {
         val edSalarioEmpleado = dialogLayout.findViewById<EditText>(R.id.edSalarioEmepleado)
 
         builder.setView(dialogLayout)
-        builder.setPositiveButton("Aceptar") { dialogInterface, i ->
-            val nombre = edNombreEmpleado.text.toString()
-            val apellidos = edApellidosEmpleado.text.toString()
-            val salario = edSalarioEmpleado.text.toString().toDouble()
-            insertar(view, nombre, apellidos, salario)
+        builder.setPositiveButton("Aceptar") { _, _ ->
+            val nombre = edNombreEmpleado.text.toString().trim()
+            val apellidos = edApellidosEmpleado.text.toString().trim()
+            val salarioTexto = edSalarioEmpleado.text.toString().trim()
+
+            if (nombre.isEmpty() || apellidos.isEmpty() || salarioTexto.isEmpty()) {
+                AlertDialog.Builder(view.context)
+                    .setTitle("Error")
+                    .setMessage("Todos los campos son obligatorios.")
+                    .setPositiveButton("Aceptar") { dialog, _ -> dialog.dismiss() }
+                    .show()
+            } else {
+                val salario = salarioTexto.toDoubleOrNull()
+                if (salario == null || salario < 0) {
+                    AlertDialog.Builder(view.context)
+                        .setTitle("Error")
+                        .setMessage("El salario debe ser un número positivo.")
+                        .setPositiveButton("Aceptar") { dialog, _ -> dialog.dismiss() }
+                        .show()
+                } else {
+                    insertar(view, nombre, apellidos, salario)
+                }
+            }
         }
         builder.setNegativeButton("Cancelar") { dialogInterface, i ->
             dialogInterface.dismiss()
@@ -107,17 +126,15 @@ class MainActivity : AppCompatActivity() {
         builder.show()
     }
 
-    private fun insertar (view: View, nombre: String, apellidos: String, salario: Double){
+    private fun insertar(view: View, nombre: String, apellidos: String, salario: Double) {
         val dbHelper = AdminSQLiteOpenHelper(view.context, "empleados", null, 1)
-        val db = dbHelper.writableDatabase
-
-        val values = ContentValues().apply {
-            put("nombre", nombre)
-            put("apellido", apellidos)
-            put("salario", salario)
+        val empleado = Empleado(nombre = nombre, apellidos = apellidos, salario = salario)
+        val resultado = dbHelper.insertarEmpleado(empleado)
+        if (resultado) {
+            Snackbar.make(view, "Empleado insertado correctamente", Snackbar.LENGTH_LONG).show()
+        } else {
+            Snackbar.make(view, "Error al insertar empleado", Snackbar.LENGTH_LONG).show()
         }
-
-        db.insert("empleado", null, values)
-        //db.close()
     }
+
 }
